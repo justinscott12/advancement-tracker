@@ -1,0 +1,33 @@
+{
+    "schemaVersion": 1,
+    "id": "advancement-tracker",
+    "version": "1.21.8",
+    "name": "Advanced Advancement Tracker",
+    "description": "Enhanced advancement progress tracking with detailed insights for biome exploration, animal taming, breeding, food consumption, and monster hunting.",
+    "authors": [
+        "Froz3nKill3r69"
+    ],
+    "contact": {
+        "homepage": "https://github.com/justinscott12",
+        "sources": "https://github.com/justinscott12/advancement-tracker"
+    },
+    "license": "MIT",
+    "icon": "assets/advancement-tracker/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+          "com.advancementTracker.AdvancementTrackerMod"
+        ],
+        "client": [
+          "com.advancementTracker.AdvancementTrackerClient"
+        ]
+    },
+    "mixins": [
+      "advancement-tracker.mixins.json"
+    ],
+    "depends": {
+        "fabricloader": ">=${loader_version}",
+        "fabric-api": "*",
+        "minecraft": "${minecraft_version}"
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "required": true,
+    "minVersion": "0.8",
+    "package": "com.advancementTracker.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "refmap": "advancement-tracker.refmap.json",
+    "mixins": [
+      "ServerPlayerEntityMixin",
+      "TameableEntityMixin",
+      "AnimalEntityMixin"
+    ],
+    "client": [],
+    "server": [],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}
