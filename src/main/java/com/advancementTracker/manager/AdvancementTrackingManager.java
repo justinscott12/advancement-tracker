@@ -2,6 +2,7 @@ package com.advancementTracker.manager;
 
 import com.advancementTracker.AdvancementTrackerMod;
 import com.advancementTracker.data.PlayerTrackingData;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
@@ -54,14 +55,28 @@ public class AdvancementTrackingManager {
             if (stack.contains(DataComponentTypes.FOOD) && player instanceof ServerPlayerEntity serverPlayer) {
                 PlayerTrackingData data = getOrCreatePlayerData(serverPlayer.getUuid());
                 data.addEatenFood(stack.getItem());
-                AdvancementTrackerMod.LOGGER.debug("Player {} ate {}", serverPlayer.getName().getString(), 
-                    Registries.ITEM.getId(stack.getItem()));
+                AdvancementTrackerMod.LOGGER.debug("Player {} ate {}", serverPlayer.getName().getString(),
+                        Registries.ITEM.getId(stack.getItem()));
+            }
+            return ActionResult.PASS;
+        });
+
+        // Block use events (for cake consumption)
+        UseBlockCallback.EVENT.register((player, world, hand, blockHitResult) -> {
+            if (player instanceof ServerPlayerEntity serverPlayer && !world.isClient) {
+                var blockState = world.getBlockState(blockHitResult.getBlockPos());
+                if (blockState.getBlock() == net.minecraft.block.Blocks.CAKE) {
+                    PlayerTrackingData data = getOrCreatePlayerData(serverPlayer.getUuid());
+                    data.addEatenFood(net.minecraft.item.Items.CAKE);
+                    AdvancementTrackerMod.LOGGER.debug("Player {} ate cake", serverPlayer.getName().getString());
+                }
             }
             return ActionResult.PASS;
         });
 
         // Entity interaction events (for leashing)
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+
             if (player instanceof ServerPlayerEntity serverPlayer && !world.isClient) {
                 ItemStack stack = player.getStackInHand(hand);
                 if (stack.getItem() == net.minecraft.item.Items.LEAD) {

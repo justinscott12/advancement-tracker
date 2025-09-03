@@ -70,43 +70,43 @@ public class AdvancementRequirements {
 
     // All nether biomes for "Hot Tourist Destinations"
     public static final Set<Identifier> ALL_NETHER_BIOMES = Set.of(
+            Identifier.of("minecraft:basalt_deltas"),
+            Identifier.of("minecraft:crimson_forest"),
             Identifier.of("minecraft:nether_wastes"),
             Identifier.of("minecraft:soul_sand_valley"),
-            Identifier.of("minecraft:crimson_forest"),
-            Identifier.of("minecraft:warped_forest"),
-            Identifier.of("minecraft:basalt_deltas")
+            Identifier.of("minecraft:warped_forest")
     );
 
     public static final Set<Identifier> ALL_CAT_VARIANTS = Set.of(
-            Identifier.of("minecraft:tabby"),
-            Identifier.of("minecraft:tuxedo"),
-            Identifier.of("minecraft:red"),
-            Identifier.of("minecraft:siamese"),
+            Identifier.of("minecraft:black"),
             Identifier.of("minecraft:british_shorthair"),
             Identifier.of("minecraft:calico"),
+            Identifier.of("minecraft:jellie"),
             Identifier.of("minecraft:persian"),
             Identifier.of("minecraft:ragdoll"),
-            Identifier.of("minecraft:white"),
-            Identifier.of("minecraft:jellie"),
-            Identifier.of("minecraft:black")
+            Identifier.of("minecraft:red"),
+            Identifier.of("minecraft:siamese"),
+            Identifier.of("minecraft:tabby"),
+            Identifier.of("minecraft:tuxedo"),
+            Identifier.of("minecraft:white")
     );
 
     public static final Set<Identifier> ALL_WOLF_VARIANTS = Set.of(
-            Identifier.of("minecraft:pale"),
-            Identifier.of("minecraft:woods"),
             Identifier.of("minecraft:ashen"),
             Identifier.of("minecraft:black"),
             Identifier.of("minecraft:chestnut"),
+            Identifier.of("minecraft:pale"),
             Identifier.of("minecraft:rusty"),
+            Identifier.of("minecraft:snowy"),
             Identifier.of("minecraft:spotted"),
             Identifier.of("minecraft:striped"),
-            Identifier.of("minecraft:snowy")
-    );
+            Identifier.of("minecraft:woods")
+            );
 
     public static final Set<Identifier> ALL_FROG_VARIANTS = Set.of(
+            Identifier.of("minecraft:cold"),
             Identifier.of("minecraft:temperate"),
-            Identifier.of("minecraft:warm"),
-            Identifier.of("minecraft:cold")
+            Identifier.of("minecraft:warm")
     );
 
     // All edible items for "A Balanced Diet"
@@ -185,43 +185,43 @@ public class AdvancementRequirements {
 
     // All hostile mobs for "Monsters Hunted"
     public static final Set<EntityType<?>> ALL_HOSTILE_MOBS = Set.of(
-            EntityType.ZOMBIE,
-            EntityType.SKELETON,
-            EntityType.SPIDER,
-            EntityType.CREEPER,
-            EntityType.ENDERMAN,
-            EntityType.WITCH,
-            EntityType.SLIME,
-            EntityType.GHAST,
-            EntityType.ZOMBIFIED_PIGLIN,
             EntityType.BLAZE,
-            EntityType.MAGMA_CUBE,
-            EntityType.ENDER_DRAGON,
-            EntityType.WITHER,
-            EntityType.GUARDIAN,
-            EntityType.ELDER_GUARDIAN,
-            EntityType.SHULKER,
-            EntityType.HUSK,
-            EntityType.STRAY,
-            EntityType.WITHER_SKELETON,
-            EntityType.ZOMBIE_VILLAGER,
-            EntityType.EVOKER,
-            EntityType.VINDICATOR,
-            EntityType.VEX,
-            EntityType.ILLUSIONER,
+            EntityType.BOGGED,
+            EntityType.BREEZE,
             EntityType.CAVE_SPIDER,
-            EntityType.SILVERFISH,
-            EntityType.ENDERMITE,
-            EntityType.PHANTOM,
+            EntityType.CREEPER,
             EntityType.DROWNED,
+            EntityType.ELDER_GUARDIAN,
+            EntityType.ENDER_DRAGON,
+            EntityType.ENDERMAN,
+            EntityType.ENDERMITE,
+            EntityType.EVOKER,
+            EntityType.GHAST,
+            EntityType.GUARDIAN,
+            EntityType.HOGLIN,
+            EntityType.HUSK,
+            EntityType.ILLUSIONER,
+            EntityType.MAGMA_CUBE,
+            EntityType.PHANTOM,
+            EntityType.PIGLIN_BRUTE,
             EntityType.PILLAGER,
             EntityType.RAVAGER,
-            EntityType.HOGLIN,
-            EntityType.ZOGLIN,
-            EntityType.PIGLIN_BRUTE,
+            EntityType.SHULKER,
+            EntityType.SILVERFISH,
+            EntityType.SKELETON,
+            EntityType.SLIME,
+            EntityType.SPIDER,
+            EntityType.STRAY,
+            EntityType.VEX,
+            EntityType.VINDICATOR,
             EntityType.WARDEN,
-            EntityType.BREEZE,
-            EntityType.BOGGED
+            EntityType.WITCH,
+            EntityType.WITHER,
+            EntityType.WITHER_SKELETON,
+            EntityType.ZOGLIN,
+            EntityType.ZOMBIE,
+            EntityType.ZOMBIE_VILLAGER,
+            EntityType.ZOMBIFIED_PIGLIN
     );
 
     // Helper methods to get missing items for each advancement

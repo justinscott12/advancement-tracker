@@ -17,8 +17,10 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class AdvancementTrackerScreen extends Screen {
     private static final int BUTTON_WIDTH = 200;
@@ -88,7 +90,7 @@ public class AdvancementTrackerScreen extends Screen {
         int contentWidthEstimate = 600;
         int desiredCenterX = (this.width + minContentStartX) / 2;
         int startX = Math.max(minContentStartX, desiredCenterX - contentWidthEstimate / 2);
-        int contentBlockStartY = 50;
+        int contentBlockStartY = 32;
 
         // Get player data
         MinecraftClient client = MinecraftClient.getInstance();
@@ -131,21 +133,30 @@ public class AdvancementTrackerScreen extends Screen {
         if (categoryContent.isEmpty()) {
             context.drawTextWithShadow(this.textRenderer, Text.literal("No items in this category yet."), startX, itemListStartY, 0xFF888888);
         } else {
-            // Multi-column layout (same as before)
-            final int ITEMS_PER_COLUMN = 25;
-            final int COLUMN_WIDTH = 200;
-            final int LINE_HEIGHT = 12;
+            // Multi-column layout with improved spacing and width calculations
+            final int ITEMS_PER_COLUMN = 20;
+            final int BASE_COLUMN_WIDTH = 140; // Slightly reduced to fit 3 columns better
+            final int LINE_HEIGHT = 10; // Reduced to fit more items
+
+            // Calculate available width for content area
+            int availableWidth = this.width - startX - 20; // Leave 20px margin on right
+            int maxColumns = 3;
+            int maxWidth = Math.min(BASE_COLUMN_WIDTH, availableWidth / maxColumns);
 
             int availableHeight = this.height - itemListStartY - 40;
             int maxRowsPerColumn = Math.min(ITEMS_PER_COLUMN, availableHeight / LINE_HEIGHT);
 
-            for (int i = 0; i < categoryContent.size() && i < maxRowsPerColumn * 3; i++) {
+            // Calculate how many items we can display
+            int maxDisplayableItems = maxRowsPerColumn * maxColumns;
+            int itemsToDisplay = Math.min(categoryContent.size() - scrollOffset, maxDisplayableItems);
+
+            for (int i = 0; i < itemsToDisplay; i++) {
                 int contentIndex = scrollOffset + i;
                 if (contentIndex >= categoryContent.size()) break;
 
                 int column = i / maxRowsPerColumn;
                 int row = i % maxRowsPerColumn;
-                int itemX = startX + (column * COLUMN_WIDTH);
+                int itemX = startX + (column * maxWidth);
                 int itemY = itemListStartY + (row * LINE_HEIGHT);
 
                 String currentItemString = categoryContent.get(contentIndex);
@@ -163,9 +174,8 @@ public class AdvancementTrackerScreen extends Screen {
                     textColor = 0xFFFFFFFF; // White
                 }
 
-                // Truncate text if too long
+                // Truncate text if too long with better width calculation
                 String displayString = displayText.getString();
-                int maxWidth = COLUMN_WIDTH - 10;
                 if (this.textRenderer.getWidth(displayString) > maxWidth) {
                     while (this.textRenderer.getWidth(displayString + "...") > maxWidth && displayString.length() > 1) {
                         displayString = displayString.substring(0, displayString.length() - 1);
@@ -200,78 +210,103 @@ public class AdvancementTrackerScreen extends Screen {
             case 0: // Adventuring Time
                 Set<Identifier> missingBiomes = AdvancementRequirements.getMissingBiomes(data);
 
-                for (Identifier biome : AdvancementRequirements.ALL_BIOMES) {
-                    String status = missingBiomes.contains(biome) ? "\u2717" : "\u2713"; // Unicode for ✗ and ✓
-                    content.add(status + " " + formatName(biome.getPath()));
-                }
+                content = AdvancementRequirements.ALL_BIOMES.stream()
+                        .sorted(Comparator.comparing(Identifier::getPath))
+                        .map(biome -> {
+                            String status = missingBiomes.contains(biome) ? "\u2717" : "\u2713";
+                            return status + " " + formatName(biome.getPath());
+                        })
+                        .collect(Collectors.toList());
                 break;
 
             case 1: // Hot Tourist Destinations
                 Set<Identifier> missingNetherBiomes = AdvancementRequirements.getMissingNetherBiomes(data);
 
-                for (Identifier biome : AdvancementRequirements.ALL_NETHER_BIOMES) {
-                    String status = missingNetherBiomes.contains(biome) ? "\u2717" : "\u2713"; // Unicode for ✗ and ✓
-                    content.add(status + " " + formatName(biome.getPath()));
-                }
+                content = AdvancementRequirements.ALL_NETHER_BIOMES.stream()
+                        .sorted(Comparator.comparing(Identifier::getPath))
+                        .map(biome -> {
+                            String status = missingNetherBiomes.contains(biome) ? "\u2717" : "\u2713";
+                            return status + " " + formatName(biome.getPath());
+                        })
+                        .collect(Collectors.toList());
                 break;
 
             case 2: // A Complete Catalogue
                 Set<Identifier> missingCats = AdvancementRequirements.getMissingCats(data);
 
-                for (Identifier catVariant : AdvancementRequirements.ALL_CAT_VARIANTS) {
-                    String status = missingCats.contains(catVariant) ? "\u2717" : "\u2713"; // Unicode for ✗ and ✓
-                    content.add(status + " " + formatName(catVariant.getPath())); // Display variant name
-                }
+                content = AdvancementRequirements.ALL_CAT_VARIANTS.stream()
+                        .sorted(Comparator.comparing(Identifier::getPath))
+                        .map(catVariant -> {
+                            String status = missingCats.contains(catVariant) ? "\u2717" : "\u2713";
+                            return status + " " + formatName(catVariant.getPath());
+                        })
+                        .collect(Collectors.toList());
                 break;
 
             case 3: // The Whole Pack
                 Set<Identifier> missingWolves = AdvancementRequirements.getMissingWolves(data);
 
-                for (Identifier wolfVariant : AdvancementRequirements.ALL_WOLF_VARIANTS) {
-                    String status = missingWolves.contains(wolfVariant) ? "\u2717" : "\u2713"; // Unicode for ✗ and ✓
-                    content.add(status + " " + formatName(wolfVariant.getPath())); // Display variant name
-                }
+                content = AdvancementRequirements.ALL_WOLF_VARIANTS.stream()
+                        .sorted(Comparator.comparing(Identifier::getPath))
+                        .map(wolfVariant -> {
+                            String status = missingWolves.contains(wolfVariant) ? "\u2717" : "\u2713";
+                            return status + " " + formatName(wolfVariant.getPath());
+                        })
+                        .collect(Collectors.toList());
                 break;
 
             case 4: // When the Squad Hops into Town
                 Set<Identifier> missingFrogs = AdvancementRequirements.getMissingFrogs(data);
 
-                for (Identifier frogVariant : AdvancementRequirements.ALL_FROG_VARIANTS) {
-                    String status = missingFrogs.contains(frogVariant) ? "\u2717" : "\u2713"; // Unicode for ✗ and ✓
-                    content.add(status + " " + formatName(frogVariant.getPath())); // Display variant name
-                }
+                content = AdvancementRequirements.ALL_FROG_VARIANTS.stream()
+                        .sorted(Comparator.comparing(Identifier::getPath))
+                        .map(frogVariant -> {
+                            String status = missingFrogs.contains(frogVariant) ? "\u2717" : "\u2713";
+                            return status + " " + formatName(frogVariant.getPath());
+                        })
+                        .collect(Collectors.toList());
                 break;
 
             case 5: // A Balanced Diet
                 Set<Item> missingFoods = AdvancementRequirements.getMissingFoods(data);
 
-                for (Item food : AdvancementRequirements.ALL_EDIBLE_ITEMS) {
-                    String status = missingFoods.contains(food) ? "\u2717" : "\u2713"; // Unicode for ✗ and ✓
-                    content.add(status + " " + formatName(Registries.ITEM.getId(food).getPath()));
-                }
+                content = AdvancementRequirements.ALL_EDIBLE_ITEMS.stream()
+                        .sorted(Comparator.comparing(food -> Registries.ITEM.getId(food).getPath()))
+                        .map(food -> {
+                            String status = missingFoods.contains(food) ? "\u2717" : "\u2713";
+                            return status + " " + formatName(Registries.ITEM.getId(food).getPath());
+                        })
+                        .collect(Collectors.toList());
                 break;
 
             case 6: // Two by Two
                 Set<EntityType<?>> missingAnimals = AdvancementRequirements.getMissingBreedableAnimals(data);
 
-                for (EntityType<?> animal : AdvancementRequirements.ALL_BREEDABLE_ANIMALS) {
-                    String status = missingAnimals.contains(animal) ? "\u2717" : "\u2713"; // Unicode for ✗ and ✓
-                    content.add(status + " " + formatName(Registries.ENTITY_TYPE.getId(animal).getPath()));
-                }
+                content = AdvancementRequirements.ALL_BREEDABLE_ANIMALS.stream()
+                        .sorted(Comparator.comparing(animal -> Registries.ENTITY_TYPE.getId(animal).getPath()))
+                        .map(animal -> {
+                            String status = missingAnimals.contains(animal) ? "\u2717" : "\u2713";
+                            return status + " " + formatName(Registries.ENTITY_TYPE.getId(animal).getPath());
+                        })
+                        .collect(Collectors.toList());
                 break;
 
             case 7: // Monsters Hunted
                 Set<EntityType<?>> missingMobs = AdvancementRequirements.getMissingHostileMobs(data);
 
-                for (EntityType<?> mob : AdvancementRequirements.ALL_HOSTILE_MOBS) {
-                    String status = missingMobs.contains(mob) ? "\u2717" : "\u2713"; // Unicode for ✗ and ✓
-                    content.add(status + " " + formatName(Registries.ENTITY_TYPE.getId(mob).getPath()));
-                }
+                content = AdvancementRequirements.ALL_HOSTILE_MOBS.stream()
+                        .sorted(Comparator.comparing(mob -> Registries.ENTITY_TYPE.getId(mob).getPath()))
+                        .map(mob -> {
+                            String status = missingMobs.contains(mob) ? "\u2717" : "\u2713";
+                            return status + " " + formatName(Registries.ENTITY_TYPE.getId(mob).getPath());
+                        })
+                        .collect(Collectors.toList());
                 break;
         }
 
         return content;
     }
+
 
 
     private int getTotalCount() {
