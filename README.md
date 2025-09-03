@@ -19,7 +19,7 @@ A Minecraft Fabric mod that allows for detailed advancement progress tracking fo
 - **Server-Client Synchronization**: Works seamlessly in multiplayer environments
 - **Lightweight**: Minimal performance impact while providing comprehensive tracking
 
-
+![biomes.png](src/main/resources/assets/advancement-tracker/biomes.png)
 ## Download
 - If you just want the mod itself and you don't care about the source code, just download the jar file for the corresponding Minecraft version from the releases folder
 
