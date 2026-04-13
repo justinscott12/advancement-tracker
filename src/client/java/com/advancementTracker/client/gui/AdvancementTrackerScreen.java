@@ -83,8 +83,6 @@ public class AdvancementTrackerScreen extends Screen {
     }
 
     private void renderCategoryContent(DrawContext context) {
-        System.out.println("[AdvancementTrackerScreen] Inside renderCategoryContent().");
-
         int buttonAreaRight = 10 + BUTTON_WIDTH;
         int minContentStartX = buttonAreaRight + 10;
         int contentWidthEstimate = 600;
@@ -100,15 +98,12 @@ public class AdvancementTrackerScreen extends Screen {
         }
 
         PlayerTrackingData data = ClientDataManager.getPlayerData(client.player.getUuid());
-        System.out.println("[AdvancementTrackerScreen] Player UUID: " + client.player.getUuid());
-        System.out.println("[AdvancementTrackerScreen] Retrieved player data: " + (data != null ? "found" : "null"));
 
         // If no data available, request it from server
         if (data == null && client.getNetworkHandler() != null) {
             AdvancementTrackerClientNetworking.requestPlayerData(client.player.getUuid());
             // Create empty data temporarily for display
             data = new PlayerTrackingData(client.player.getUuid());
-            System.out.println("[AdvancementTrackerScreen] Requested player data from server");
         } else if (data == null) {
             data = new PlayerTrackingData(client.player.getUuid());
         }
@@ -118,20 +113,25 @@ public class AdvancementTrackerScreen extends Screen {
                 Text.literal("Category: " + categories[currentCategory]).formatted(Formatting.YELLOW),
                 startX, contentBlockStartY, 0xFFFFFFFF);
 
+        context.drawTextWithShadow(this.textRenderer,
+                Text.literal("Checklist fills automatically as you play (nothing to add).").formatted(Formatting.GRAY),
+                startX, contentBlockStartY + 12, 0xFFAAAAAA);
+
         // Display completion progress
         int completed = getCompletedCount(data);
         int total = getTotalCount();
         context.drawTextWithShadow(this.textRenderer,
                 Text.literal("Progress: " + completed + "/" + total).formatted(Formatting.AQUA),
-                startX, contentBlockStartY + 20, 0xFFFFFFFF);
+                startX, contentBlockStartY + 26, 0xFFFFFFFF);
 
-        // Rest of the rendering code remains the same...
-        // Display specific items in category
+        // Full checklist from AdvancementRequirements; not user-editable
         List<String> categoryContent = getCategoryContent(data);
-        int itemListStartY = contentBlockStartY + 45;
+        int itemListStartY = contentBlockStartY + 51;
 
         if (categoryContent.isEmpty()) {
-            context.drawTextWithShadow(this.textRenderer, Text.literal("No items in this category yet."), startX, itemListStartY, 0xFF888888);
+            context.drawTextWithShadow(this.textRenderer,
+                    Text.literal("Could not build checklist (unexpected). Try reopening the screen.").formatted(Formatting.RED),
+                    startX, itemListStartY, 0xFFFF6666);
         } else {
             // Multi-column layout with improved spacing and width calculations
             final int ITEMS_PER_COLUMN = 20;
@@ -301,6 +301,9 @@ public class AdvancementTrackerScreen extends Screen {
                             return status + " " + formatName(Registries.ENTITY_TYPE.getId(mob).getPath());
                         })
                         .collect(Collectors.toList());
+                break;
+            default:
+                content = List.of("Unknown category — pick a tab on the left.");
                 break;
         }
 

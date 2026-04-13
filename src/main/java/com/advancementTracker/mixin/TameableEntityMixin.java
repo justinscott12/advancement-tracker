@@ -14,7 +14,7 @@ public class TameableEntityMixin {
 
     @Inject(method = "setOwner", at = @At("TAIL"))
     private void onSetOwner(LivingEntity owner, CallbackInfo ci) {
-        if (owner instanceof ServerPlayerEntity serverPlayer && !owner.getWorld().isClient) {
+        if (owner instanceof ServerPlayerEntity serverPlayer && !owner.getEntityWorld().isClient()) {
             TameableEntity entity = (TameableEntity) (Object) this;
             AdvancementTrackingManager.onAnimalTamed(serverPlayer, entity);
         }

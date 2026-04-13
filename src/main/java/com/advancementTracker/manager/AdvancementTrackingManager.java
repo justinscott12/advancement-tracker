@@ -63,7 +63,7 @@ public class AdvancementTrackingManager {
 
         // Block use events (for cake consumption)
         UseBlockCallback.EVENT.register((player, world, hand, blockHitResult) -> {
-            if (player instanceof ServerPlayerEntity serverPlayer && !world.isClient) {
+            if (player instanceof ServerPlayerEntity serverPlayer && !world.isClient()) {
                 var blockState = world.getBlockState(blockHitResult.getBlockPos());
                 if (blockState.getBlock() == net.minecraft.block.Blocks.CAKE) {
                     PlayerTrackingData data = getOrCreatePlayerData(serverPlayer.getUuid());
@@ -77,7 +77,7 @@ public class AdvancementTrackingManager {
         // Entity interaction events (for leashing)
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
 
-            if (player instanceof ServerPlayerEntity serverPlayer && !world.isClient) {
+            if (player instanceof ServerPlayerEntity serverPlayer && !world.isClient()) {
                 ItemStack stack = player.getStackInHand(hand);
                 if (stack.getItem() == net.minecraft.item.Items.LEAD) {
                     // Track potential frog leashing - this will fire before the leash is actually applied
@@ -88,7 +88,7 @@ public class AdvancementTrackingManager {
         });
 
         // Entity death events (for monster hunting)
-        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((world, entity, killedEntity) -> {
+        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((world, entity, killedEntity, damageSource) -> {
             if (entity instanceof ServerPlayerEntity player && killedEntity instanceof LivingEntity) {
                 PlayerTrackingData data = getOrCreatePlayerData(player.getUuid());
                 data.addKilledMob(killedEntity.getType());

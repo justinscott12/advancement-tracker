@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.util.Identifier;
 
 public class AdvancementTrackerClient implements ClientModInitializer {
 
@@ -19,10 +20,10 @@ public class AdvancementTrackerClient implements ClientModInitializer {
 
         // Register keybinding
         openScreenKeybinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Advancement Tracker",
+                "key.advancement-tracker.open",
                 InputUtil.Type.KEYSYM,
                 InputUtil.GLFW_KEY_J,
-                "category.advancement-tracker.general"
+                KeyBinding.Category.create(Identifier.of("advancement-tracker", "general"))
         ));
 
         // Register client tick event to handle keybinding

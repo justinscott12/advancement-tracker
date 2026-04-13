@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.10.1'
+    id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
     id 'maven-publish'
 }
 
@@ -26,10 +26,6 @@ loom {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
         }
-    }
-
-    mixin {
-        defaultRefmapName = "advancement-tracker.refmap.json"
     }
 }
 
@@ -69,16 +65,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    // Force Java toolchain to use Java 21
+    withSourcesJar()
     toolchain {
         languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
-    archivesBaseName = project.archives_base_name
-    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-    // if it is present.
-    // If you remove this line, sources will not be generated.
-    withSourcesJar()
 }
 
 jar {
