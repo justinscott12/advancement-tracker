@@ -19,6 +19,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.TypedActionResult;
 
 import com.advancementTracker.network.AdvancementTrackerNetworking;
 
@@ -58,7 +59,7 @@ public class AdvancementTrackingManager {
                 AdvancementTrackerMod.LOGGER.debug("Player {} ate {}", serverPlayer.getName().getString(),
                         Registries.ITEM.getId(stack.getItem()));
             }
-            return ActionResult.PASS;
+            return TypedActionResult.pass(stack);
         });
 
         // Block use events (for cake consumption)

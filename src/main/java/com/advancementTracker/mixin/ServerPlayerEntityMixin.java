@@ -15,7 +15,7 @@ public class ServerPlayerEntityMixin {
     @Inject(method = "tick", at = @At("TAIL"))
     private void onTick(CallbackInfo ci) {
         ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
-        ServerWorld world = player.getWorld();
+        ServerWorld world = player.getServerWorld();
         BlockPos pos = player.getBlockPos();
 
         // Check biome every few ticks to avoid performance issues

@@ -3,6 +3,7 @@ package com.advancementTracker.data;
 import net.minecraft.entity.EntityType;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.registry.Registry;
@@ -139,7 +140,7 @@ public class PlayerTrackingData {
 
 
     public static PlayerTrackingData readFromNbt(NbtCompound nbt) {
-        String playerIdString = nbt.getString("PlayerId").orElse("");
+        String playerIdString = nbt.getString("PlayerId");
         UUID playerId;
 
         if (!playerIdString.isEmpty()) {
@@ -170,16 +171,13 @@ public class PlayerTrackingData {
 
     private static void loadIdentifierSetFromNbt(NbtCompound nbt, String key, Set<Identifier> targetSet) {
         if (nbt.contains(key)) {
-            Optional<NbtList> optionalList = nbt.getList(key);
-            if (optionalList.isPresent()) {
-                NbtList list = optionalList.get();
-                for (int i = 0; i < list.size(); i++) {
-                    String idStr = list.getString(i).orElse("");
-                    if (!idStr.isEmpty()) {
-                        Identifier identifier = Identifier.tryParse(idStr);
-                        if (identifier != null) {
-                            targetSet.add(identifier);
-                        }
+            NbtList list = nbt.getList(key, NbtElement.STRING_TYPE);
+            for (int i = 0; i < list.size(); i++) {
+                String idStr = list.getString(i);
+                if (!idStr.isEmpty()) {
+                    Identifier identifier = Identifier.tryParse(idStr);
+                    if (identifier != null) {
+                        targetSet.add(identifier);
                     }
                 }
             }
@@ -188,18 +186,15 @@ public class PlayerTrackingData {
 
     private static <T> void loadRegistrySetFromNbt(NbtCompound nbt, String key, Registry<T> registry, Set<T> targetSet) {
         if (nbt.contains(key)) {
-            Optional<NbtList> optionalList = nbt.getList(key);
-            if (optionalList.isPresent()) {
-                NbtList list = optionalList.get();
-                for (int i = 0; i < list.size(); i++) {
-                    String idStr = list.getString(i).orElse("");
-                    if (!idStr.isEmpty()) {
-                        Identifier identifier = Identifier.tryParse(idStr);
-                        if (identifier != null) {
-                            T value = registry.get(identifier);
-                            if (value != null) {
-                                targetSet.add(value);
-                            }
+            NbtList list = nbt.getList(key, NbtElement.STRING_TYPE);
+            for (int i = 0; i < list.size(); i++) {
+                String idStr = list.getString(i);
+                if (!idStr.isEmpty()) {
+                    Identifier identifier = Identifier.tryParse(idStr);
+                    if (identifier != null) {
+                        T value = registry.get(identifier);
+                        if (value != null) {
+                            targetSet.add(value);
                         }
                     }
                 }
