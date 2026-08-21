@@ -4,32 +4,32 @@ import com.advancementTracker.client.gui.AdvancementTrackerScreen;
 import com.advancementTracker.network.AdvancementTrackerClientNetworking;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.util.Identifier;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.minecraft.client.KeyMapping;
+import com.mojang.blaze3d.platform.InputConstants;
+import org.lwjgl.glfw.GLFW;
 
 public class AdvancementTrackerClient implements ClientModInitializer {
 
-    private static KeyBinding openScreenKeybinding;
+    private static KeyMapping openScreenKeybinding;
 
     @Override
     public void onInitializeClient() {
         // Register client networking
         AdvancementTrackerClientNetworking.registerClientNetworking();
 
-        // Register keybinding
-        openScreenKeybinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.advancement-tracker.open",
-                InputUtil.Type.KEYSYM,
-                InputUtil.GLFW_KEY_J,
-                KeyBinding.Category.create(Identifier.of("advancement-tracker", "general"))
+        // Register keybinding (J by default)
+        openScreenKeybinding = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "Advancement Tracker",
+                InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_J,
+                KeyMapping.Category.MISC
         ));
 
         // Register client tick event to handle keybinding
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openScreenKeybinding.wasPressed()) {
-                client.setScreen(new AdvancementTrackerScreen());
+            while (openScreenKeybinding.consumeClick()) {
+                client.setScreenAndShow(new AdvancementTrackerScreen());
             }
         });
     }

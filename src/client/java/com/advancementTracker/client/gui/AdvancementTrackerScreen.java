@@ -4,17 +4,16 @@ import com.advancementTracker.data.AdvancementRequirements;
 import com.advancementTracker.data.PlayerTrackingData;
 import com.advancementTracker.manager.ClientDataManager;
 import com.advancementTracker.network.AdvancementTrackerClientNetworking;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.Item;
-
-import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.Item;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -36,7 +35,7 @@ public class AdvancementTrackerScreen extends Screen {
     private int scrollOffset = 0;
 
     public AdvancementTrackerScreen() {
-        super(Text.literal("Advancement Tracker"));
+        super(Component.literal("Advancement Tracker"));
     }
 
     @Override
@@ -49,40 +48,35 @@ public class AdvancementTrackerScreen extends Screen {
 
         for (int i = 0; i < categories.length; i++) {
             final int categoryIndex = i;
-            ButtonWidget button = ButtonWidget.builder(
-                            Text.literal(categories[i]),
+            Button button = Button.builder(
+                            Component.literal(categories[i]),
                             btn -> {
                                 currentCategory = categoryIndex;
                                 scrollOffset = 0;
                             }
                     )
-                    .dimensions(startX, startY + i * 25, BUTTON_WIDTH, BUTTON_HEIGHT)
+                    .bounds(startX, startY + i * 25, BUTTON_WIDTH, BUTTON_HEIGHT)
                     .build();
 
-            this.addDrawableChild(button);
+            this.addRenderableWidget(button);
         }
 
         // Close button
-        this.addDrawableChild(ButtonWidget.builder(
-                        Text.literal("Close"),
-                        btn -> this.close()
+        this.addRenderableWidget(Button.builder(
+                        Component.literal("Close"),
+                        btn -> this.onClose()
                 )
-                .dimensions(this.width / 2 - 50, this.height - 30, 100, 20)
+                .bounds(this.width / 2 - 50, this.height - 30, 100, 20)
                 .build());
     }
 
-
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderInGameBackground(context);
-
-        // Call super.render to handle buttons and other UI elements
-        super.render(context, mouseX, mouseY, delta);
-
-        renderCategoryContent(context);
+    public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(extractor, mouseX, mouseY, delta);
+        renderCategoryContent(extractor);
     }
 
-    private void renderCategoryContent(DrawContext context) {
+    private void renderCategoryContent(GuiGraphicsExtractor extractor) {
         int buttonAreaRight = 10 + BUTTON_WIDTH;
         int minContentStartX = buttonAreaRight + 10;
         int contentWidthEstimate = 600;
@@ -91,27 +85,26 @@ public class AdvancementTrackerScreen extends Screen {
         int contentBlockStartY = 32;
 
         // Get player data
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null || client.player == null) {
-            context.drawTextWithShadow(this.textRenderer, Text.literal("Player not available."), startX, contentBlockStartY, 0xFFFFFFFF);
+            extractor.text(this.font, Component.literal("Player not available."), startX, contentBlockStartY, 0xFFFFFFFF, true);
             return;
         }
 
-        PlayerTrackingData data = ClientDataManager.getPlayerData(client.player.getUuid());
+        PlayerTrackingData data = ClientDataManager.getPlayerData(client.player.getUUID());
 
         // If no data available, request it from server
-        if (data == null && client.getNetworkHandler() != null) {
-            AdvancementTrackerClientNetworking.requestPlayerData(client.player.getUuid());
-            // Create empty data temporarily for display
-            data = new PlayerTrackingData(client.player.getUuid());
+        if (data == null && client.getConnection() != null) {
+            AdvancementTrackerClientNetworking.requestPlayerData(client.player.getUUID());
+            data = new PlayerTrackingData(client.player.getUUID());
         } else if (data == null) {
-            data = new PlayerTrackingData(client.player.getUuid());
+            data = new PlayerTrackingData(client.player.getUUID());
         }
 
         // Display category title
-        context.drawTextWithShadow(this.textRenderer,
-                Text.literal("Category: " + categories[currentCategory]).formatted(Formatting.YELLOW),
-                startX, contentBlockStartY, 0xFFFFFFFF);
+        extractor.text(this.font,
+                Component.literal("Category: " + categories[currentCategory]).withStyle(ChatFormatting.YELLOW),
+                startX, contentBlockStartY, 0xFFFFFFFF, true);
 
         context.drawTextWithShadow(this.textRenderer,
                 Text.literal("Checklist fills automatically as you play (nothing to add).").formatted(Formatting.GRAY),
@@ -120,33 +113,28 @@ public class AdvancementTrackerScreen extends Screen {
         // Display completion progress
         int completed = getCompletedCount(data);
         int total = getTotalCount();
-        context.drawTextWithShadow(this.textRenderer,
-                Text.literal("Progress: " + completed + "/" + total).formatted(Formatting.AQUA),
-                startX, contentBlockStartY + 26, 0xFFFFFFFF);
+        extractor.text(this.font,
+                Component.literal("Progress: " + completed + "/" + total).withStyle(ChatFormatting.AQUA),
+                startX, contentBlockStartY + 20, 0xFFFFFFFF, true);
 
-        // Full checklist from AdvancementRequirements; not user-editable
+        // Display specific items in category
         List<String> categoryContent = getCategoryContent(data);
         int itemListStartY = contentBlockStartY + 51;
 
         if (categoryContent.isEmpty()) {
-            context.drawTextWithShadow(this.textRenderer,
-                    Text.literal("Could not build checklist (unexpected). Try reopening the screen.").formatted(Formatting.RED),
-                    startX, itemListStartY, 0xFFFF6666);
+            extractor.text(this.font, Component.literal("No items in this category yet."), startX, itemListStartY, 0xFF888888, true);
         } else {
-            // Multi-column layout with improved spacing and width calculations
             final int ITEMS_PER_COLUMN = 20;
-            final int BASE_COLUMN_WIDTH = 140; // Slightly reduced to fit 3 columns better
-            final int LINE_HEIGHT = 10; // Reduced to fit more items
+            final int BASE_COLUMN_WIDTH = 140;
+            final int LINE_HEIGHT = 10;
 
-            // Calculate available width for content area
-            int availableWidth = this.width - startX - 20; // Leave 20px margin on right
+            int availableWidth = this.width - startX - 20;
             int maxColumns = 3;
             int maxWidth = Math.min(BASE_COLUMN_WIDTH, availableWidth / maxColumns);
 
             int availableHeight = this.height - itemListStartY - 40;
             int maxRowsPerColumn = Math.min(ITEMS_PER_COLUMN, availableHeight / LINE_HEIGHT);
 
-            // Calculate how many items we can display
             int maxDisplayableItems = maxRowsPerColumn * maxColumns;
             int itemsToDisplay = Math.min(categoryContent.size() - scrollOffset, maxDisplayableItems);
 
@@ -161,41 +149,36 @@ public class AdvancementTrackerScreen extends Screen {
 
                 String currentItemString = categoryContent.get(contentIndex);
 
-                Text displayText;
                 int textColor;
-                if (currentItemString.startsWith("\u2713")) { // Checkmark (✓)
-                    displayText = Text.literal(currentItemString);
+                if (currentItemString.startsWith("✓")) { // Checkmark (✓)
                     textColor = 0xFF00FF00; // Green
-                } else if (currentItemString.startsWith("\u2717")) { // Ballot X (✗)
-                    displayText = Text.literal(currentItemString);
+                } else if (currentItemString.startsWith("✗")) { // Ballot X (✗)
                     textColor = 0xFFFF0000; // Red
                 } else {
-                    displayText = Text.literal(currentItemString);
                     textColor = 0xFFFFFFFF; // White
                 }
 
-                // Truncate text if too long with better width calculation
-                String displayString = displayText.getString();
-                if (this.textRenderer.getWidth(displayString) > maxWidth) {
-                    while (this.textRenderer.getWidth(displayString + "...") > maxWidth && displayString.length() > 1) {
+                // Truncate text if too long
+                String displayString = currentItemString;
+                if (this.font.width(displayString) > maxWidth) {
+                    while (this.font.width(displayString + "...") > maxWidth && displayString.length() > 1) {
                         displayString = displayString.substring(0, displayString.length() - 1);
                     }
-                    displayText = Text.literal(displayString + "...");
+                    displayString = displayString + "...";
                 }
 
-                context.drawTextWithShadow(this.textRenderer, displayText, itemX, itemY, textColor);
+                extractor.text(this.font, Component.literal(displayString), itemX, itemY, textColor, true);
             }
         }
     }
-
 
     private int getCompletedCount(PlayerTrackingData data) {
         return switch (currentCategory) {
             case 0 -> data.getDiscoveredBiomes().size();
             case 1 -> data.getDiscoveredNetherBiomes().size();
-            case 2 -> data.getTamedCatVariants().size(); 
+            case 2 -> data.getTamedCatVariants().size();
             case 3 -> data.getTamedWolfVariants().size();
-            case 4 -> data.getLedFrogVariants().size(); 
+            case 4 -> data.getLedFrogVariants().size();
             case 5 -> data.getEatenFoods().size();
             case 6 -> data.getBredAnimals().size();
             case 7 -> data.getKilledMobs().size();
@@ -207,110 +190,74 @@ public class AdvancementTrackerScreen extends Screen {
         List<String> content = new ArrayList<>();
 
         switch (currentCategory) {
-            case 0: // Adventuring Time
-                Set<Identifier> missingBiomes = AdvancementRequirements.getMissingBiomes(data);
-
+            case 0: {
+                Set<Identifier> missing = AdvancementRequirements.getMissingBiomes(data);
                 content = AdvancementRequirements.ALL_BIOMES.stream()
                         .sorted(Comparator.comparing(Identifier::getPath))
-                        .map(biome -> {
-                            String status = missingBiomes.contains(biome) ? "\u2717" : "\u2713";
-                            return status + " " + formatName(biome.getPath());
-                        })
+                        .map(biome -> (missing.contains(biome) ? "✗" : "✓") + " " + formatName(biome.getPath()))
                         .collect(Collectors.toList());
                 break;
-
-            case 1: // Hot Tourist Destinations
-                Set<Identifier> missingNetherBiomes = AdvancementRequirements.getMissingNetherBiomes(data);
-
+            }
+            case 1: {
+                Set<Identifier> missing = AdvancementRequirements.getMissingNetherBiomes(data);
                 content = AdvancementRequirements.ALL_NETHER_BIOMES.stream()
                         .sorted(Comparator.comparing(Identifier::getPath))
-                        .map(biome -> {
-                            String status = missingNetherBiomes.contains(biome) ? "\u2717" : "\u2713";
-                            return status + " " + formatName(biome.getPath());
-                        })
+                        .map(biome -> (missing.contains(biome) ? "✗" : "✓") + " " + formatName(biome.getPath()))
                         .collect(Collectors.toList());
                 break;
-
-            case 2: // A Complete Catalogue
-                Set<Identifier> missingCats = AdvancementRequirements.getMissingCats(data);
-
+            }
+            case 2: {
+                Set<Identifier> missing = AdvancementRequirements.getMissingCats(data);
                 content = AdvancementRequirements.ALL_CAT_VARIANTS.stream()
                         .sorted(Comparator.comparing(Identifier::getPath))
-                        .map(catVariant -> {
-                            String status = missingCats.contains(catVariant) ? "\u2717" : "\u2713";
-                            return status + " " + formatName(catVariant.getPath());
-                        })
+                        .map(v -> (missing.contains(v) ? "✗" : "✓") + " " + formatName(v.getPath()))
                         .collect(Collectors.toList());
                 break;
-
-            case 3: // The Whole Pack
-                Set<Identifier> missingWolves = AdvancementRequirements.getMissingWolves(data);
-
+            }
+            case 3: {
+                Set<Identifier> missing = AdvancementRequirements.getMissingWolves(data);
                 content = AdvancementRequirements.ALL_WOLF_VARIANTS.stream()
                         .sorted(Comparator.comparing(Identifier::getPath))
-                        .map(wolfVariant -> {
-                            String status = missingWolves.contains(wolfVariant) ? "\u2717" : "\u2713";
-                            return status + " " + formatName(wolfVariant.getPath());
-                        })
+                        .map(v -> (missing.contains(v) ? "✗" : "✓") + " " + formatName(v.getPath()))
                         .collect(Collectors.toList());
                 break;
-
-            case 4: // When the Squad Hops into Town
-                Set<Identifier> missingFrogs = AdvancementRequirements.getMissingFrogs(data);
-
+            }
+            case 4: {
+                Set<Identifier> missing = AdvancementRequirements.getMissingFrogs(data);
                 content = AdvancementRequirements.ALL_FROG_VARIANTS.stream()
                         .sorted(Comparator.comparing(Identifier::getPath))
-                        .map(frogVariant -> {
-                            String status = missingFrogs.contains(frogVariant) ? "\u2717" : "\u2713";
-                            return status + " " + formatName(frogVariant.getPath());
-                        })
+                        .map(v -> (missing.contains(v) ? "✗" : "✓") + " " + formatName(v.getPath()))
                         .collect(Collectors.toList());
                 break;
-
-            case 5: // A Balanced Diet
-                Set<Item> missingFoods = AdvancementRequirements.getMissingFoods(data);
-
+            }
+            case 5: {
+                Set<Item> missing = AdvancementRequirements.getMissingFoods(data);
                 content = AdvancementRequirements.ALL_EDIBLE_ITEMS.stream()
-                        .sorted(Comparator.comparing(food -> Registries.ITEM.getId(food).getPath()))
-                        .map(food -> {
-                            String status = missingFoods.contains(food) ? "\u2717" : "\u2713";
-                            return status + " " + formatName(Registries.ITEM.getId(food).getPath());
-                        })
+                        .sorted(Comparator.comparing(food -> BuiltInRegistries.ITEM.getKey(food).getPath()))
+                        .map(food -> (missing.contains(food) ? "✗" : "✓") + " " + formatName(BuiltInRegistries.ITEM.getKey(food).getPath()))
                         .collect(Collectors.toList());
                 break;
-
-            case 6: // Two by Two
-                Set<EntityType<?>> missingAnimals = AdvancementRequirements.getMissingBreedableAnimals(data);
-
+            }
+            case 6: {
+                Set<EntityType<?>> missing = AdvancementRequirements.getMissingBreedableAnimals(data);
                 content = AdvancementRequirements.ALL_BREEDABLE_ANIMALS.stream()
-                        .sorted(Comparator.comparing(animal -> Registries.ENTITY_TYPE.getId(animal).getPath()))
-                        .map(animal -> {
-                            String status = missingAnimals.contains(animal) ? "\u2717" : "\u2713";
-                            return status + " " + formatName(Registries.ENTITY_TYPE.getId(animal).getPath());
-                        })
+                        .sorted(Comparator.comparing(a -> BuiltInRegistries.ENTITY_TYPE.getKey(a).getPath()))
+                        .map(a -> (missing.contains(a) ? "✗" : "✓") + " " + formatName(BuiltInRegistries.ENTITY_TYPE.getKey(a).getPath()))
                         .collect(Collectors.toList());
                 break;
-
-            case 7: // Monsters Hunted
-                Set<EntityType<?>> missingMobs = AdvancementRequirements.getMissingHostileMobs(data);
-
+            }
+            case 7: {
+                Set<EntityType<?>> missing = AdvancementRequirements.getMissingHostileMobs(data);
                 content = AdvancementRequirements.ALL_HOSTILE_MOBS.stream()
-                        .sorted(Comparator.comparing(mob -> Registries.ENTITY_TYPE.getId(mob).getPath()))
-                        .map(mob -> {
-                            String status = missingMobs.contains(mob) ? "\u2717" : "\u2713";
-                            return status + " " + formatName(Registries.ENTITY_TYPE.getId(mob).getPath());
-                        })
+                        .sorted(Comparator.comparing(m -> BuiltInRegistries.ENTITY_TYPE.getKey(m).getPath()))
+                        .map(m -> (missing.contains(m) ? "✗" : "✓") + " " + formatName(BuiltInRegistries.ENTITY_TYPE.getKey(m).getPath()))
                         .collect(Collectors.toList());
                 break;
-            default:
-                content = List.of("Unknown category — pick a tab on the left.");
-                break;
+            }
         }
 
         return content;
     }
-
-
 
     private int getTotalCount() {
         return switch (currentCategory) {
@@ -328,7 +275,6 @@ public class AdvancementTrackerScreen extends Screen {
 
     private String formatName(String name) {
         String replaced = name.replace("_", " ");
-        // Capitalize first letter of each word
         String[] words = replaced.split(" ");
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < words.length; i++) {
@@ -344,7 +290,7 @@ public class AdvancementTrackerScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

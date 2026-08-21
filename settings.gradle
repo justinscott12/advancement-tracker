@@ -10,5 +10,6 @@ pluginManagement {
 }
 
 plugins {
+    // Lets Gradle auto-provision the JDK 25 toolchain that Minecraft 26.2 needs.
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
