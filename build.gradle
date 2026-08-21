@@ -64,8 +64,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    // Force Java toolchain to use Java 21
+    withSourcesJar()
     toolchain {
         languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
