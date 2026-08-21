@@ -4,21 +4,34 @@ import com.advancementTracker.AdvancementTrackerMod;
 import com.advancementTracker.data.PlayerTrackingData;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.passive.*;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.feline.Cat;
+import net.minecraft.world.entity.animal.feline.CatVariant;
+import net.minecraft.world.entity.animal.frog.Frog;
+import net.minecraft.world.entity.animal.frog.FrogVariant;
+import net.minecraft.world.entity.animal.wolf.Wolf;
+import net.minecraft.world.entity.animal.wolf.WolfVariant;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.storage.LevelResource;
 
 import com.advancementTracker.network.AdvancementTrackerNetworking;
 
@@ -31,15 +44,19 @@ public class AdvancementTrackingManager {
     private static MinecraftServer server;
     private static File dataFile;
 
+    // 26.2 has no EntityType.CAT-style constants — resolve by id.
+    private static EntityType<?> et(String path) {
+        return BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.withDefaultNamespace(path));
+    }
+
     public static void init() {
-        // Register event listeners
         registerEventListeners();
         AdvancementTrackerMod.LOGGER.info("Advancement Tracking Manager initialized");
     }
 
     public static void onServerStart(MinecraftServer minecraftServer) {
         server = minecraftServer;
-        dataFile = new File(server.getSavePath(net.minecraft.util.WorldSavePath.ROOT).toFile(), "advancement_tracker_data.dat");
+        dataFile = new File(server.getWorldPath(LevelResource.ROOT).toFile(), "advancement_tracker_data.dat");
         loadData();
     }
 
@@ -51,55 +68,53 @@ public class AdvancementTrackingManager {
     private static void registerEventListeners() {
         // Item use events (for food consumption)
         UseItemCallback.EVENT.register((player, world, hand) -> {
-            ItemStack stack = player.getStackInHand(hand);
-            if (stack.contains(DataComponentTypes.FOOD) && player instanceof ServerPlayerEntity serverPlayer) {
-                PlayerTrackingData data = getOrCreatePlayerData(serverPlayer.getUuid());
+            ItemStack stack = player.getItemInHand(hand);
+            if (stack.has(DataComponents.FOOD) && player instanceof ServerPlayer serverPlayer) {
+                PlayerTrackingData data = getOrCreatePlayerData(serverPlayer.getUUID());
                 data.addEatenFood(stack.getItem());
                 AdvancementTrackerMod.LOGGER.debug("Player {} ate {}", serverPlayer.getName().getString(),
-                        Registries.ITEM.getId(stack.getItem()));
+                        BuiltInRegistries.ITEM.getKey(stack.getItem()));
             }
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
 
         // Block use events (for cake consumption)
         UseBlockCallback.EVENT.register((player, world, hand, blockHitResult) -> {
-            if (player instanceof ServerPlayerEntity serverPlayer && !world.isClient) {
+            if (player instanceof ServerPlayer serverPlayer && !world.isClientSide()) {
                 var blockState = world.getBlockState(blockHitResult.getBlockPos());
-                if (blockState.getBlock() == net.minecraft.block.Blocks.CAKE) {
-                    PlayerTrackingData data = getOrCreatePlayerData(serverPlayer.getUuid());
-                    data.addEatenFood(net.minecraft.item.Items.CAKE);
+                if (blockState.getBlock() == Blocks.CAKE) {
+                    PlayerTrackingData data = getOrCreatePlayerData(serverPlayer.getUUID());
+                    data.addEatenFood(net.minecraft.world.item.Items.CAKE);
                     AdvancementTrackerMod.LOGGER.debug("Player {} ate cake", serverPlayer.getName().getString());
                 }
             }
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
 
         // Entity interaction events (for leashing)
-        net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
-
-            if (player instanceof ServerPlayerEntity serverPlayer && !world.isClient) {
-                ItemStack stack = player.getStackInHand(hand);
-                if (stack.getItem() == net.minecraft.item.Items.LEAD) {
-                    // Track potential frog leashing - this will fire before the leash is actually applied
+        UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+            if (player instanceof ServerPlayer serverPlayer && !world.isClientSide()) {
+                ItemStack stack = player.getItemInHand(hand);
+                if (stack.getItem() == net.minecraft.world.item.Items.LEAD) {
                     onFrogLeashed(serverPlayer, entity);
                 }
             }
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
 
         // Entity death events (for monster hunting)
-        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((world, entity, killedEntity) -> {
-            if (entity instanceof ServerPlayerEntity player && killedEntity instanceof LivingEntity) {
-                PlayerTrackingData data = getOrCreatePlayerData(player.getUuid());
+        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((world, entity, killedEntity, damageSource) -> {
+            if (entity instanceof ServerPlayer player && killedEntity instanceof LivingEntity) {
+                PlayerTrackingData data = getOrCreatePlayerData(player.getUUID());
                 data.addKilledMob(killedEntity.getType());
                 AdvancementTrackerMod.LOGGER.debug("Player {} killed {}", player.getName().getString(),
-                    Registries.ENTITY_TYPE.getId(killedEntity.getType()));
+                    BuiltInRegistries.ENTITY_TYPE.getKey(killedEntity.getType()));
             }
         });
 
-        // Player join events
+        // Player respawn events
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
-            getOrCreatePlayerData(newPlayer.getUuid());
+            getOrCreatePlayerData(newPlayer.getUUID());
         });
     }
 
@@ -107,86 +122,71 @@ public class AdvancementTrackingManager {
         return playerData.computeIfAbsent(playerId, PlayerTrackingData::new);
     }
 
-    // Updated method to sync data after changes
-    private static void updateAndSyncPlayerData(ServerPlayerEntity player, PlayerTrackingData data) {
-        // Send updated data to the specific player
+    private static void updateAndSyncPlayerData(ServerPlayer player, PlayerTrackingData data) {
         AdvancementTrackerNetworking.sendPlayerDataToClient(player, data);
-        
-        // Also send to other players if they're tracking this player's data
-        // (You can modify this logic based on your needs)
     }
 
     // Called from mixins
-    public static void onBiomeDiscovered(ServerPlayerEntity player, Identifier biomeId) {
-        PlayerTrackingData data = getOrCreatePlayerData(player.getUuid());
+    public static void onBiomeDiscovered(ServerPlayer player, Identifier biomeId) {
+        PlayerTrackingData data = getOrCreatePlayerData(player.getUUID());
         data.addDiscoveredBiome(biomeId);
 
-        // Check if it's a nether biome
         if (isNetherBiome(biomeId)) {
             data.addDiscoveredNetherBiome(biomeId);
         }
 
-        // Auto-sync the updated data
         updateAndSyncPlayerData(player, data);
 
-        AdvancementTrackerMod.LOGGER.debug("Player {} discovered biome {}", 
+        AdvancementTrackerMod.LOGGER.debug("Player {} discovered biome {}",
             player.getName().getString(), biomeId);
     }
 
-    public static void onAnimalTamed(ServerPlayerEntity player, TameableEntity entity) {
-        PlayerTrackingData data = getOrCreatePlayerData(player.getUuid());
+    public static void onAnimalTamed(ServerPlayer player, TamableAnimal entity) {
+        PlayerTrackingData data = getOrCreatePlayerData(player.getUUID());
         EntityType<?> entityType = entity.getType();
 
-        if (entityType == EntityType.CAT) {
-            // Extract cat variant from the entity and convert to identifier
-            RegistryEntry<CatVariant> catVariantEntry = getCatVariant(entity);
-            Identifier catVariantId = catVariantEntry.getKey().map(key -> key.getValue()).orElse(null);
+        if (entityType == et("cat")) {
+            Holder<CatVariant> catVariant = getCatVariant(entity);
+            Identifier catVariantId = catVariant.unwrapKey().map(ResourceKey::identifier).orElse(null);
             if (catVariantId != null) {
                 data.addTamedCatVariant(catVariantId);
             }
-        } else if (entityType == EntityType.WOLF) {
-            // Extract wolf variant from the entity
+        } else if (entityType == et("wolf")) {
             Identifier wolfVariant = getWolfVariant(entity);
             data.addTamedWolfVariant(wolfVariant);
         }
 
-        // Auto-sync the updated data
         updateAndSyncPlayerData(player, data);
 
         AdvancementTrackerMod.LOGGER.debug("Player {} tamed {}",
-                player.getName().getString(), Registries.ENTITY_TYPE.getId(entityType));
+                player.getName().getString(), BuiltInRegistries.ENTITY_TYPE.getKey(entityType));
     }
 
-
-    public static void onAnimalBred(ServerPlayerEntity player, AnimalEntity baby) {
-        PlayerTrackingData data = getOrCreatePlayerData(player.getUuid());
+    public static void onAnimalBred(ServerPlayer player, Animal baby) {
+        PlayerTrackingData data = getOrCreatePlayerData(player.getUUID());
         data.addBredAnimal(baby.getType());
-        
-        // Auto-sync the updated data
+
         updateAndSyncPlayerData(player, data);
-        
-        AdvancementTrackerMod.LOGGER.debug("Player {} bred {}", 
-            player.getName().getString(), Registries.ENTITY_TYPE.getId(baby.getType()));
+
+        AdvancementTrackerMod.LOGGER.debug("Player {} bred {}",
+            player.getName().getString(), BuiltInRegistries.ENTITY_TYPE.getKey(baby.getType()));
     }
 
-    public static void onFrogLeashed(ServerPlayerEntity player, Entity frog) {
-        if (frog.getType() == EntityType.FROG) {
-            PlayerTrackingData data = getOrCreatePlayerData(player.getUuid());
+    public static void onFrogLeashed(ServerPlayer player, Entity frog) {
+        if (frog.getType() == et("frog")) {
+            PlayerTrackingData data = getOrCreatePlayerData(player.getUUID());
 
-            // Extract frog variant from the entity and convert to identifier
-            RegistryEntry<FrogVariant> frogVariantEntry = getFrogVariant(frog);
-            Identifier frogVariantId = frogVariantEntry.getKey().map(key -> key.getValue()).orElse(null);
+            Holder<FrogVariant> frogVariant = getFrogVariant(frog);
+            Identifier frogVariantId = frogVariant.unwrapKey().map(ResourceKey::identifier).orElse(null);
             if (frogVariantId != null) {
                 data.addLedFrogVariant(frogVariantId);
             }
 
-            // Auto-sync the updated data
             updateAndSyncPlayerData(player, data);
 
             AdvancementTrackerMod.LOGGER.debug("Player {} leashed a frog", player.getName().getString());
         }
     }
-
 
     private static boolean isNetherBiome(Identifier biomeId) {
         return biomeId.getNamespace().equals("minecraft") && (
@@ -206,8 +206,8 @@ public class AdvancementTrackingManager {
         if (dataFile == null) return;
 
         try {
-            NbtCompound rootNbt = new NbtCompound();
-            NbtCompound playersNbt = new NbtCompound();
+            CompoundTag rootNbt = new CompoundTag();
+            CompoundTag playersNbt = new CompoundTag();
 
             for (Map.Entry<UUID, PlayerTrackingData> entry : playerData.entrySet()) {
                 playersNbt.put(entry.getKey().toString(), entry.getValue().writeToNbt());
@@ -215,7 +215,7 @@ public class AdvancementTrackingManager {
 
             rootNbt.put("Players", playersNbt);
 
-            net.minecraft.nbt.NbtIo.writeCompressed(rootNbt, dataFile.toPath());
+            NbtIo.writeCompressed(rootNbt, dataFile.toPath());
 
             AdvancementTrackerMod.LOGGER.info("Saved advancement tracking data for {} players", playerData.size());
         } catch (IOException e) {
@@ -227,16 +227,18 @@ public class AdvancementTrackingManager {
         if (dataFile == null || !dataFile.exists()) return;
 
         try {
-            NbtCompound rootNbt = net.minecraft.nbt.NbtIo.readCompressed(dataFile.toPath(), net.minecraft.nbt.NbtSizeTracker.ofUnlimitedBytes());
+            CompoundTag rootNbt = NbtIo.readCompressed(dataFile.toPath(), NbtAccounter.unlimitedHeap());
 
-            if (rootNbt.contains("Players")) {
-                NbtCompound playersNbt = (NbtCompound) rootNbt.get("Players");
-                for (String playerIdStr : playersNbt.getKeys()) {
+            CompoundTag playersNbt = rootNbt.getCompound("Players").orElse(null);
+            if (playersNbt != null) {
+                for (String playerIdStr : playersNbt.keySet()) {
                     try {
                         UUID playerId = UUID.fromString(playerIdStr);
-                        NbtCompound playerNbt = (NbtCompound) playersNbt.get(playerIdStr);
-                        PlayerTrackingData data = PlayerTrackingData.readFromNbt(playerNbt);
-                        playerData.put(playerId, data);
+                        CompoundTag playerNbt = playersNbt.getCompound(playerIdStr).orElse(null);
+                        if (playerNbt != null) {
+                            PlayerTrackingData data = PlayerTrackingData.readFromNbt(playerNbt);
+                            playerData.put(playerId, data);
+                        }
                     } catch (Exception e) {
                         AdvancementTrackerMod.LOGGER.warn("Failed to load data for player {}", playerIdStr, e);
                     }
@@ -248,27 +250,28 @@ public class AdvancementTrackingManager {
         }
     }
 
-    private static RegistryEntry<CatVariant> getCatVariant(TameableEntity cat) {
-        CatEntity catEntity = (CatEntity) cat;
+    private static Holder<CatVariant> getCatVariant(TamableAnimal cat) {
+        Cat catEntity = (Cat) cat;
         return catEntity.getVariant();
     }
 
-    private static Identifier getWolfVariant(TameableEntity wolf) {
-        WolfEntity wolfEntity = (WolfEntity) wolf;
+    @SuppressWarnings("unchecked")
+    private static Identifier getWolfVariant(TamableAnimal wolf) {
+        Wolf wolfEntity = (Wolf) wolf;
         try {
-            // Use reflection to access the private getVariant method
-            java.lang.reflect.Method getVariantMethod = WolfEntity.class.getDeclaredMethod("getVariant");
+            // getVariant() is private on Wolf — reach it reflectively.
+            java.lang.reflect.Method getVariantMethod = Wolf.class.getDeclaredMethod("getVariant");
             getVariantMethod.setAccessible(true);
-            RegistryEntry<WolfVariant> variantEntry = (RegistryEntry<WolfVariant>) getVariantMethod.invoke(wolfEntity);
-            return variantEntry.getKey().map(key -> key.getValue()).orElse(Identifier.of("minecraft", "pale"));
+            Holder<WolfVariant> variant = (Holder<WolfVariant>) getVariantMethod.invoke(wolfEntity);
+            return variant.unwrapKey().map(ResourceKey::identifier).orElse(Identifier.fromNamespaceAndPath("minecraft", "pale"));
         } catch (Exception e) {
             AdvancementTrackerMod.LOGGER.warn("Failed to get wolf variant via reflection: {}", e.getMessage());
-            return Identifier.of("minecraft", "pale");
+            return Identifier.fromNamespaceAndPath("minecraft", "pale");
         }
     }
 
-    private static RegistryEntry<FrogVariant> getFrogVariant(Entity frog) {
-        FrogEntity frogEntity = (FrogEntity) frog;
+    private static Holder<FrogVariant> getFrogVariant(Entity frog) {
+        Frog frogEntity = (Frog) frog;
         return frogEntity.getVariant();
     }
 }

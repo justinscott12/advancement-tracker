@@ -1,26 +1,27 @@
 package com.advancementTracker.mixin;
 
 import com.advancementTracker.manager.AdvancementTrackingManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ServerPlayerEntity.class)
+@Mixin(ServerPlayer.class)
 public class ServerPlayerEntityMixin {
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void onTick(CallbackInfo ci) {
-        ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
-        ServerWorld world = player.getWorld();
-        BlockPos pos = player.getBlockPos();
+        ServerPlayer player = (ServerPlayer) (Object) this;
+        Level world = player.level();
+        BlockPos pos = player.blockPosition();
 
-        // Check biome every few ticks to avoid performance issues
-        if (player.age % 20 == 0) { // Every second
-            var biomeId = world.getBiome(pos).getKey().orElseThrow().getValue();
+        // Check biome every second to avoid performance issues
+        if (player.tickCount % 20 == 0) {
+            Identifier biomeId = world.getBiome(pos).unwrapKey().orElseThrow().identifier();
             if (biomeId != null) {
                 AdvancementTrackingManager.onBiomeDiscovered(player, biomeId);
             }

@@ -1,24 +1,24 @@
 package com.advancementTracker.data;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.Item;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.Item;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 
 import java.util.*;
 
-public class PlayerTrackingData { 
+public class PlayerTrackingData {
     private final UUID playerId;
     private final Set<Identifier> discoveredBiomes = new HashSet<>();
     private final Set<Identifier> discoveredNetherBiomes = new HashSet<>();
     private final Set<EntityType<?>> tamedCats = new HashSet<>();
     private final Set<EntityType<?>> tamedWolves = new HashSet<>();
     private final Set<EntityType<?>> ledFrogs = new HashSet<>();
-    private final Set<Item> eatenFoods = new HashSet<>(); 
+    private final Set<Item> eatenFoods = new HashSet<>();
     private final Set<EntityType<?>> bredAnimals = new HashSet<>();
     private final Set<EntityType<?>> killedMobs = new HashSet<>();
 
@@ -98,47 +98,46 @@ public class PlayerTrackingData {
         return new HashSet<>(ledFrogVariants);
     }
 
-    public NbtCompound writeToNbt() {
-        NbtCompound nbt = new NbtCompound();
+    public CompoundTag writeToNbt() {
+        CompoundTag nbt = new CompoundTag();
         nbt.putString("PlayerId", playerId.toString());
 
-        NbtList biomesList = new NbtList();
-        discoveredBiomes.forEach(id -> biomesList.add(NbtString.of(id.toString())));
+        ListTag biomesList = new ListTag();
+        discoveredBiomes.forEach(id -> biomesList.add(StringTag.valueOf(id.toString())));
         nbt.put("DiscoveredBiomes", biomesList);
 
-        NbtList netherBiomesList = new NbtList();
-        discoveredNetherBiomes.forEach(id -> netherBiomesList.add(NbtString.of(id.toString())));
+        ListTag netherBiomesList = new ListTag();
+        discoveredNetherBiomes.forEach(id -> netherBiomesList.add(StringTag.valueOf(id.toString())));
         nbt.put("DiscoveredNetherBiomes", netherBiomesList);
 
-        NbtList tamedCatVariantsList = new NbtList();
-        tamedCatVariants.forEach(id -> tamedCatVariantsList.add(NbtString.of(id.toString())));
+        ListTag tamedCatVariantsList = new ListTag();
+        tamedCatVariants.forEach(id -> tamedCatVariantsList.add(StringTag.valueOf(id.toString())));
         nbt.put("TamedCatVariants", tamedCatVariantsList);
 
-        NbtList tamedWolfVariantsList = new NbtList();
-        tamedWolfVariants.forEach(id -> tamedWolfVariantsList.add(NbtString.of(id.toString())));
+        ListTag tamedWolfVariantsList = new ListTag();
+        tamedWolfVariants.forEach(id -> tamedWolfVariantsList.add(StringTag.valueOf(id.toString())));
         nbt.put("TamedWolfVariants", tamedWolfVariantsList);
 
-        NbtList ledFrogVariantsList = new NbtList();
-        ledFrogVariants.forEach(id -> ledFrogVariantsList.add(NbtString.of(id.toString())));
+        ListTag ledFrogVariantsList = new ListTag();
+        ledFrogVariants.forEach(id -> ledFrogVariantsList.add(StringTag.valueOf(id.toString())));
         nbt.put("LedFrogVariants", ledFrogVariantsList);
 
-        NbtList eatenFoodsList = new NbtList();
-        eatenFoods.forEach(item -> eatenFoodsList.add(NbtString.of(Registries.ITEM.getId(item).toString())));
+        ListTag eatenFoodsList = new ListTag();
+        eatenFoods.forEach(item -> eatenFoodsList.add(StringTag.valueOf(BuiltInRegistries.ITEM.getKey(item).toString())));
         nbt.put("EatenFoods", eatenFoodsList);
 
-        NbtList bredAnimalsList = new NbtList();
-        bredAnimals.forEach(type -> bredAnimalsList.add(NbtString.of(Registries.ENTITY_TYPE.getId(type).toString())));
+        ListTag bredAnimalsList = new ListTag();
+        bredAnimals.forEach(type -> bredAnimalsList.add(StringTag.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString())));
         nbt.put("BredAnimals", bredAnimalsList);
 
-        NbtList killedMobsList = new NbtList();
-        killedMobs.forEach(type -> killedMobsList.add(NbtString.of(Registries.ENTITY_TYPE.getId(type).toString())));
+        ListTag killedMobsList = new ListTag();
+        killedMobs.forEach(type -> killedMobsList.add(StringTag.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString())));
         nbt.put("KilledMobs", killedMobsList);
 
         return nbt;
     }
 
-
-    public static PlayerTrackingData readFromNbt(NbtCompound nbt) {
+    public static PlayerTrackingData readFromNbt(CompoundTag nbt) {
         String playerIdString = nbt.getString("PlayerId").orElse("");
         UUID playerId;
 
@@ -160,50 +159,41 @@ public class PlayerTrackingData {
         loadIdentifierSetFromNbt(nbt, "TamedWolfVariants", data.tamedWolfVariants);
         loadIdentifierSetFromNbt(nbt, "LedFrogVariants", data.ledFrogVariants);
 
-        loadRegistrySetFromNbt(nbt, "EatenFoods", Registries.ITEM, data.eatenFoods);
-        loadRegistrySetFromNbt(nbt, "BredAnimals", Registries.ENTITY_TYPE, data.bredAnimals);
-        loadRegistrySetFromNbt(nbt, "KilledMobs", Registries.ENTITY_TYPE, data.killedMobs);
+        loadRegistrySetFromNbt(nbt, "EatenFoods", BuiltInRegistries.ITEM, data.eatenFoods);
+        loadRegistrySetFromNbt(nbt, "BredAnimals", BuiltInRegistries.ENTITY_TYPE, data.bredAnimals);
+        loadRegistrySetFromNbt(nbt, "KilledMobs", BuiltInRegistries.ENTITY_TYPE, data.killedMobs);
 
         return data;
     }
 
-
-    private static void loadIdentifierSetFromNbt(NbtCompound nbt, String key, Set<Identifier> targetSet) {
-        if (nbt.contains(key)) {
-            Optional<NbtList> optionalList = nbt.getList(key);
-            if (optionalList.isPresent()) {
-                NbtList list = optionalList.get();
-                for (int i = 0; i < list.size(); i++) {
-                    String idStr = list.getString(i).orElse("");
-                    if (!idStr.isEmpty()) {
-                        Identifier identifier = Identifier.tryParse(idStr);
-                        if (identifier != null) {
-                            targetSet.add(identifier);
-                        }
+    private static void loadIdentifierSetFromNbt(CompoundTag nbt, String key, Set<Identifier> targetSet) {
+        nbt.getList(key).ifPresent(list -> {
+            for (int i = 0; i < list.size(); i++) {
+                String idStr = list.getStringOr(i, "");
+                if (!idStr.isEmpty()) {
+                    Identifier identifier = Identifier.tryParse(idStr);
+                    if (identifier != null) {
+                        targetSet.add(identifier);
                     }
                 }
             }
-        }
+        });
     }
 
-    private static <T> void loadRegistrySetFromNbt(NbtCompound nbt, String key, Registry<T> registry, Set<T> targetSet) {
-        if (nbt.contains(key)) {
-            Optional<NbtList> optionalList = nbt.getList(key);
-            if (optionalList.isPresent()) {
-                NbtList list = optionalList.get();
-                for (int i = 0; i < list.size(); i++) {
-                    String idStr = list.getString(i).orElse("");
-                    if (!idStr.isEmpty()) {
-                        Identifier identifier = Identifier.tryParse(idStr);
-                        if (identifier != null) {
-                            T value = registry.get(identifier);
-                            if (value != null) {
-                                targetSet.add(value);
-                            }
+    private static <T> void loadRegistrySetFromNbt(CompoundTag nbt, String key, Registry<T> registry, Set<T> targetSet) {
+        nbt.getList(key).ifPresent(list -> {
+            for (int i = 0; i < list.size(); i++) {
+                String idStr = list.getStringOr(i, "");
+                if (!idStr.isEmpty()) {
+                    Identifier identifier = Identifier.tryParse(idStr);
+                    if (identifier != null) {
+                        T value = registry.getValue(identifier);
+                        if (value != null) {
+                            targetSet.add(value);
                         }
                     }
                 }
             }
-        }
+        });
     }
 }
