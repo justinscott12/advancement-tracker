@@ -106,10 +106,6 @@ public class AdvancementTrackerScreen extends Screen {
                 Component.literal("Category: " + categories[currentCategory]).withStyle(ChatFormatting.YELLOW),
                 startX, contentBlockStartY, 0xFFFFFFFF, true);
 
-        context.drawTextWithShadow(this.textRenderer,
-                Text.literal("Checklist fills automatically as you play (nothing to add).").formatted(Formatting.GRAY),
-                startX, contentBlockStartY + 12, 0xFFAAAAAA);
-
         // Display completion progress
         int completed = getCompletedCount(data);
         int total = getTotalCount();
@@ -119,7 +115,7 @@ public class AdvancementTrackerScreen extends Screen {
 
         // Display specific items in category
         List<String> categoryContent = getCategoryContent(data);
-        int itemListStartY = contentBlockStartY + 51;
+        int itemListStartY = contentBlockStartY + 45;
 
         if (categoryContent.isEmpty()) {
             extractor.text(this.font, Component.literal("No items in this category yet."), startX, itemListStartY, 0xFF888888, true);
