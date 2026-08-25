@@ -62,7 +62,11 @@ public class AdvancementTrackingManager {
 
     public static void onServerStop(MinecraftServer minecraftServer) {
         saveData();
+        // Clear in-memory state so it doesn't leak into the next world loaded
+        // in the same JVM session (singleplayer keeps the process alive).
+        playerData.clear();
         server = null;
+        dataFile = null;
     }
 
     private static void registerEventListeners() {
@@ -224,6 +228,10 @@ public class AdvancementTrackingManager {
     }
 
     private static void loadData() {
+        // Start from a clean slate every load so a new world (which may have no
+        // data file) never inherits the previously loaded world's progress.
+        playerData.clear();
+
         if (dataFile == null || !dataFile.exists()) return;
 
         try {
