@@ -19,4 +19,10 @@ public class ClientDataManager {
     public static PlayerTrackingData getPlayerData(UUID playerId) {
         return clientPlayerData.get(playerId);
     }
+
+    // Drop all cached data when leaving a world so the next world doesn't
+    // display the previous world's progress (client stays alive across worlds).
+    public static void clear() {
+        clientPlayerData.clear();
+    }
 }
