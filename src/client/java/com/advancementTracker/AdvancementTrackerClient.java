@@ -9,7 +9,6 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import com.mojang.blaze3d.platform.InputConstants;
-import org.lwjgl.glfw.GLFW;
 
 public class AdvancementTrackerClient implements ClientModInitializer {
 
@@ -32,10 +31,13 @@ public class AdvancementTrackerClient implements ClientModInitializer {
         });
 
         // Register keybinding (J by default)
+        // 26.3: Minecraft moved from GLFW to SDL for input. Type.KEYSYM is now
+        // Type.KEYBOARD, and key codes come from InputConstants (SDL scancodes)
+        // instead of org.lwjgl.glfw.GLFW.
         openScreenKeybinding = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "Advancement Tracker",
-                InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_J,
+                InputConstants.Type.KEYBOARD,
+                InputConstants.KEY_J,
                 KeyMapping.Category.MISC
         ));
 

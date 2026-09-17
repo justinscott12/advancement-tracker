@@ -2,7 +2,7 @@
     "schemaVersion": 1,
     "id": "advancement-tracker",
     "version": "${version}",
-    "name": "Advanced Advancement Tracker",
+    "name": "Advancement Tracker",
     "description": "Enhanced advancement progress tracking with detailed insights for biome exploration, animal taming, breeding, food consumption, and monster hunting.",
     "authors": [
         "Froz3nKill3r69"

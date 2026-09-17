@@ -1,63 +1,47 @@
 # Advancement Tracker
 
-A Minecraft Fabric mod that allows for detailed advancement progress tracking for the following advancements:
+A Minecraft Fabric mod that adds detailed, real-time progress tracking for the game's grindiest "collect them all" advancements — so you can see exactly what you still have left to do.
 
-- Adventuring Time (Discover all biomes)
-- Hot Tourist Destination (Discover all Nether biomes)
-- A Complete Catalogue (Tame all cat variants)
-- The Whole Pack (Tame all wolf variants)
-- When The Squad Hops Into Town (Use a lead on all frog variants)
-- A Balanced Diet (Eat one of every food item)
-- Two By Two (Breed every animal)
-- Monsters Hunter (Kill every mob)
+## Tracked advancements
+
+- **Adventuring Time** — discover all biomes
+- **Hot Tourist Destinations** — discover all Nether biomes
+- **A Complete Catalogue** — tame all cat variants
+- **The Whole Pack** — tame all wolf variants
+- **When the Squad Hops into Town** — use a lead on all frog variants
+- **A Balanced Diet** — eat one of every food item
+- **Two by Two** — breed every pair of animals
+- **Monsters Hunted** — kill one of every hostile mob
 
 ## Features
 
-- Detailed tracking of advancement requirements with real-time progress updates
-- Easy-to-use UI to view your detailed progress, accessible via keybind (default: "J") 
-- **Real-time Updates**: Progress is tracked and updated as you play
-- **Server-Client Synchronization**: Works seamlessly in multiplayer environments
-- **Lightweight**: Minimal performance impact while providing comprehensive tracking
+- Per-requirement progress with live updates as you play — no more guessing which biome or mob you're missing.
+- A dedicated screen to browse your progress, opened with a keybind (default: **J**, rebindable in Controls).
+- Server–client synchronization, so tracking works in multiplayer.
+- Lightweight, with minimal performance impact.
 
 ![biomes.png](src/main/resources/assets/advancement-tracker/biomes.png)
-## Download
-- If you just want the mod itself and you don't care about the source code, just download the jar file for the corresponding Minecraft version from the releases folder
 
 ## Installation
 
 1. Install [Fabric Loader](https://fabricmc.net/use/installer/)
-2. Install [Fabric API](https://www.curseforge.com/minecraft/mc-mods/fabric-api)
-3. Download the latest release of this mod from the releases page or releases folder
-4. Place the mod file in your `mods` folder
+2. Install [Fabric API](https://modrinth.com/mod/fabric-api)
+3. Download the mod from [Modrinth](https://modrinth.com/mod/advancement-tracker) or the Releases page
+4. Place the jar in your `mods` folder
 
 ## Building
 
-To build the mod yourself:
+```bash
+./gradlew clean build
+```
 
-1. Clone this repository
-2. Run `./gradlew clean build`
-3. The built mod will be in `build/libs/`
-
-## Testing
-
-### Development Testing
-
-1. Run the mod in development environment:
-   ```bash
-   ./gradlew runClient
-   ```
-
-      **Note**: If you encounter mixin errors during startup, check that:
-      - All package names in your mixin configuration files match your actual package structure
-      - Mixin classes exist in the specified locations
-      - The mod ID in `fabric.mod.json` matches your mixin configuration
-
+The built jar lands in `build/libs/`. To run a dev client, use `./gradlew runClient`.
 
 ## Compatibility
 
-- Minecraft: 1.21.8
-- Fabric Loader: 0.16.9+
-- Fabric API: 0.110.0+1.21.8
+- Minecraft: 26.2
+- Fabric Loader: 0.19.3+
+- Fabric API: 0.158.0+26.2
 
 ## License
 
